@@ -1,0 +1,5 @@
+upload_syllabus:
+  description: "Send the received PDF syllabus to the backend webhook for processing"
+  agent: n8n_connector
+  expected_output: "Confirmation that the file was successfully uploaded to the n8n webhook"
+
