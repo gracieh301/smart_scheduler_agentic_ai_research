@@ -1,0 +1,45 @@
+
+
+# ---- GLOBAL RULES FOR PROJECT ----
+
+# Folder responsibility
+/backend is backend logic only, implemented in Flask
+/backend/crew holds all CrewAI logic (agents, supervisor, tasks, and tools)
+/backend/vector is responsible for the RAG pipeline (embeddings + vector DB)
+/backend/db contains database models and persistence helpers
+/streamlit is the user interface and must never contain backend logic
+
+# API boundaries
+Flask exposes JSON endpoints only
+Streamlit calls Flask through /streamlit/api_client.py
+Streamlit must never connect directly to CrewAI or to the database
+
+# CrewAI architecture
+supervisor.py orchestrates other agents and tasks
+agents.py defines agent behaviors but NO business logic
+tools.py defines all non-LLM functions (database ops, vector DB retrieval, webhook POSTs)
+crew.py wires everything together for CrewAI
+
+# RAG rules
+rag.py must handle:
+    - PDF ingestion
+    - text chunking
+    - embeddings
+    - vector DB search
+Agents must never call embeddings or vector DB directly; they must call a tool
+
+# Database
+models.py defines schema only
+plan_ops.py handles persistence logic only
+
+# Coding style
+- Use docstrings and type hints
+- Functions must be small and single-responsibility
+- Agents return structured dicts/JSON, not free-form text
+
+# Safety against project corruption
+Cursor must NOT:
+- move folders
+- merge backend + frontend code
+- delete or replace entire files unless explicitly asked
+- embed API keys directly in code

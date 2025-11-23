@@ -1,0 +1,28 @@
+# secrets
+.env
+
+# python build files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# virtual env
+venv/
+.venv/
+
+# editor files
+.idea/
+.vscode/
+
+# OS junk
+.DS_Store
+
+# database + vector storage
+*.db
+backend/study_planner.db
+backend/chroma_db/
+backend/vector/storage/
+
+# Temporary files
+streamlit/temp_*.pdf

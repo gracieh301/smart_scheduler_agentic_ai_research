@@ -1,4 +1,18 @@
 crewai
+crewai-tools
 requests
 python-dotenv
 flask
+flask-cors
+sqlalchemy
+PyPDF2
+chromadb
+sentence-transformers
+streamlit
+pandas
+pydantic
+groq
+langchain-groq
+mistralai
+langchain-mistralai
+# openai  # Optional - only needed if using OpenAI embeddings (set OPENAI_API_KEY)
