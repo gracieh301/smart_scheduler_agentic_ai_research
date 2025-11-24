@@ -19,7 +19,7 @@ load_dotenv()
 
 # Import backend modules
 from db.models import init_db
-from db.plan_ops import save_syllabus, get_study_plan
+from db.plan_ops import save_syllabus, get_study_plan, get_syllabus
 from vector.rag import load_and_embed_syllabus
 from crew.crew import run_plan_generation
 
@@ -241,113 +241,33 @@ def generate_plan():
         }), 500
 
 
-@app.route("/store_syllabus_from_n8n", methods=["POST"])
-def store_syllabus_from_n8n():
+@app.route("/syllabus/<int:syllabus_id>", methods=["GET"])
+def get_syllabus_endpoint(syllabus_id: int):
     """
-    Store syllabus information received from N8N.
+    Get syllabus data by ID.
     
-    This endpoint receives the processed syllabus data from N8N and stores it
-    in the database. N8N should send a JSON object with syllabus information
-    after processing the PDF.
+    This endpoint allows n8n or other services to fetch full syllabus data
+    including raw_text and structured_data for processing.
     
-    Expected JSON structure from N8N:
-    {
-        "Course Name": "Machine Learning",
-        "Course Code": "CS101",
-        "Class Times": ["Monday 10:00 AM", "Wednesday 2:00 PM"],
-        "Lab Due Dates": ["2024-01-15", "2024-02-20"],
-        "Midterm Date": "2024-03-10"
-    }
-    
-    The request should also include user_id and file_name in the JSON
-    or as form data (sent from Streamlit).
+    Args:
+        syllabus_id: ID of the syllabus to retrieve
     
     Returns:
-        JSON response with success status and syllabus_id
+        JSON response with syllabus data
     """
     try:
-        data = request.get_json()
+        syllabus = get_syllabus(syllabus_id)
         
-        if not data:
+        if not syllabus:
             return jsonify({
                 "success": False,
-                "error": "No JSON data provided"
-            }), 400
+                "error": f"Syllabus with ID {syllabus_id} not found"
+            }), 404
         
-        # Extract user_id from data or form (Streamlit sends it)
-        user_id = data.get("user_id") or request.form.get("user_id")
-        if not user_id:
-            return jsonify({
-                "success": False,
-                "error": "Missing 'user_id' field. Please include it in the JSON or form data."
-            }), 400
-        
-        # Extract course name from N8N's "Course Name" field
-        course_name = data.get("Course Name", "").strip()
-        if not course_name:
-            return jsonify({
-                "success": False,
-                "error": "Missing 'Course Name' field in N8N response"
-            }), 400
-        
-        # Get optional fields
-        course_code = data.get("Course Code", "").strip() or request.form.get("course_code")
-        file_name = data.get("file_name") or request.form.get("file_name")
-        
-        # Extract structured data from N8N (preserve original format)
-        structured_data = {
-            "Course Name": data.get("Course Name"),
-            "Course Code": data.get("Course Code", ""),
-            "Class Times": data.get("Class Times", []),
-            "Lab Due Dates": data.get("Lab Due Dates", []),
-            "Midterm Date": data.get("Midterm Date", "")
-        }
-        
-        # Create raw_text from structured data for RAG purposes
-        # This allows CrewAI agents to search the syllabus content
-        raw_text_parts = [
-            f"Course Name: {course_name}",
-        ]
-        
-        if course_code:
-            raw_text_parts.append(f"Course Code: {course_code}")
-        
-        if structured_data.get("Class Times"):
-            raw_text_parts.append(f"Class Times: {', '.join(structured_data['Class Times'])}")
-        
-        if structured_data.get("Lab Due Dates"):
-            raw_text_parts.append(f"Lab Due Dates: {', '.join(structured_data['Lab Due Dates'])}")
-        
-        if structured_data.get("Midterm Date"):
-            raw_text_parts.append(f"Midterm Date: {structured_data['Midterm Date']}")
-        
-        raw_text = "\n".join(raw_text_parts)
-        
-        # Save to database
-        try:
-            syllabus_id = save_syllabus(
-                user_id=user_id,
-                course_name=course_name,
-                raw_text=raw_text,
-                file_name=file_name,
-                course_code=course_code,
-                structured_data=structured_data
-            )
-            
-            return jsonify({
-                "success": True,
-                "syllabus_id": syllabus_id,
-                "message": "Syllabus stored successfully from N8N",
-                "course_name": course_name,
-                "user_id": user_id,
-                "structured_data": structured_data
-            }), 200
-            
-        except Exception as e:
-            return jsonify({
-                "success": False,
-                "error": f"Error saving syllabus to database: {str(e)}"
-            }), 500
+        return jsonify({
+            "success": True,
+            "data": syllabus
+        }), 200
         
     except Exception as e:
         return jsonify({

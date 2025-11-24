@@ -15,7 +15,6 @@ from .agents import (
     create_tutor_agent,
     create_parsing_agent
 )
-from .tools import send_plan_to_n8n
 
 
 def create_crew() -> Crew:
@@ -102,7 +101,6 @@ def create_plan_generation_task(
     }}
     
     4. Save the plan using the write_study_plan tool
-    5. Optionally send the plan to n8n webhook using send_plan_to_n8n tool
     
     Course: {course_name or "Unknown"}
     Syllabus ID: {syllabus_id or "Not specified"}

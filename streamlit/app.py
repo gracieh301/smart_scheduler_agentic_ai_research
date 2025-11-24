@@ -5,7 +5,7 @@ Allows students to upload syllabus PDFs and generate optimized study plans.
 import streamlit as st
 import os
 from pathlib import Path
-from api_client import upload_syllabus, generate_plan, health_check
+from api_client import upload_syllabus_to_n8n, generate_plan, health_check
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -47,9 +47,10 @@ def main():
         if n8n_url:
             st.success("✅ N8N webhook configured")
             st.caption(f"URL: {n8n_url[:50]}...")
+            st.caption("Calendar integration enabled")
         else:
             st.warning("⚠️ N8N webhook not configured")
-            st.caption("Set N8N_WEBHOOK_URL in .env file")
+            st.caption("Set N8N_WEBHOOK_URL in .env file for calendar integration")
         
         # Health check
         st.subheader("Backend Status")
@@ -67,7 +68,7 @@ def main():
     
     with tab1:
         st.header("Upload Syllabus")
-        st.markdown("Upload a PDF of your course syllabus. The file will be sent directly to N8N for processing.")
+        st.markdown("Upload a PDF of your course syllabus. The file will be sent to n8n for processing and calendar integration.")
         
         uploaded_file = st.file_uploader(
             "Choose a PDF file",
@@ -89,14 +90,13 @@ def main():
             if uploaded_file is None:
                 st.error("Please upload a PDF file first")
             else:
-                with st.spinner("Uploading syllabus to N8N... This will be processed by your N8N workflow."):
+                with st.spinner("Sending PDF to n8n for processing and calendar integration..."):
                     # Save uploaded file temporarily
                     temp_path = Path("temp_syllabus.pdf")
                     with open(temp_path, "wb") as f:
                         f.write(uploaded_file.getbuffer())
                     
-                    # Upload directly to N8N webhook
-                    from api_client import upload_syllabus_to_n8n
+                    # Upload directly to n8n webhook
                     result = upload_syllabus_to_n8n(
                         file_path=str(temp_path),
                         user_id=st.session_state.user_id,
@@ -110,28 +110,28 @@ def main():
                     
                     if result.get("success"):
                         data = result.get("data", {})
-                        # Get syllabus_id from the stored syllabus
-                        syllabus_id = data.get("syllabus_id")
-                        st.session_state.syllabus_id = syllabus_id
-                        st.success(f"✅ Syllabus processed by N8N and stored successfully!")
-                        st.info(f"📝 Syllabus ID: {syllabus_id} - Ready for study plan generation")
+                        st.success(f"✅ Syllabus sent to n8n successfully!")
+                        st.info("📅 n8n is processing the PDF and uploading dates to your calendar")
                         
-                        # Show summary
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.metric("Course", data.get("course_name", "Unknown"))
-                        with col2:
-                            st.metric("Syllabus ID", syllabus_id)
+                        # Show summary if n8n returns data
+                        if data:
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.metric("Course", data.get("course_name", course_name or "Unknown"))
+                            with col2:
+                                if "syllabus_id" in data:
+                                    st.metric("Syllabus ID", data.get("syllabus_id"))
                         
-                        # Optionally show N8N response details
-                        with st.expander("View N8N Response Details"):
-                            st.json(result.get("n8n_response", {}))
+                        # Optionally show n8n response
+                        if data and len(data) > 0:
+                            with st.expander("View n8n Response"):
+                                st.json(data)
                     else:
                         st.error(f"❌ Error: {result.get('error')}")
                         st.info("💡 Make sure:")
                         st.info("1. N8N_WEBHOOK_URL is set in your .env file")
-                        st.info("2. N8N workflow returns JSON with: user_id, course_name, raw_text")
-                        st.info("3. Flask backend is running for storing the syllabus")
+                        st.info("2. Your n8n workflow is active and configured correctly")
+                        st.info("3. The PDF file is not corrupted")
     
     with tab2:
         st.header("Generate Study Plan")

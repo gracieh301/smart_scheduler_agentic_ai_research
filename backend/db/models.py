@@ -19,7 +19,7 @@ class Syllabus(Base):
     Syllabus model for storing uploaded syllabus documents.
     
     Stores the raw text extracted from PDFs and metadata about the course.
-    Also stores structured data from N8N (class times, due dates, etc.).
+    Also stores structured data (class times, due dates, etc.) if available.
     """
     __tablename__ = 'syllabi'
     
@@ -29,7 +29,7 @@ class Syllabus(Base):
     course_code = Column(String(50), nullable=True)
     raw_text = Column(Text, nullable=False)  # Extracted text from PDF (for RAG)
     file_name = Column(String(255), nullable=True)
-    structured_data = Column(JSON, nullable=True)  # Structured data from N8N (Class Times, Lab Due Dates, etc.)
+    structured_data = Column(JSON, nullable=True)  # Structured data (Class Times, Lab Due Dates, etc.)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

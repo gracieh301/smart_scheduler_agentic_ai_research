@@ -1,12 +1,11 @@
 """
 CrewAI tools for Study Plan Generator.
-Provides tools for reading syllabus content, writing study plans, and sending to n8n webhook.
+Provides tools for reading syllabus content and writing study plans.
 """
 from crewai.tools import BaseTool
 from typing import Dict, Any, Optional, Type
 from pydantic import BaseModel, Field
 import os
-import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,9 +20,6 @@ sys.path.insert(0, str(backend_path))
 
 from vector.rag import retrieve_relevant_chunks
 from db.plan_ops import save_study_plan, get_study_plan, get_syllabus
-
-# UPDATE THIS: Set N8N_WEBHOOK_URL environment variable to your n8n webhook URL
-N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "")
 
 
 class ReadSyllabusContentInput(BaseModel):
@@ -147,52 +143,8 @@ class GetExistingPlanTool(BaseTool):
             return f"Error retrieving study plan: {str(e)}"
 
 
-class SendPlanToN8nInput(BaseModel):
-    """Input schema for send_plan_to_n8n tool."""
-    plan_data: Dict[str, Any] = Field(..., description="Complete study plan structure as dictionary")
-    user_id: str = Field(..., description="User identifier")
-
-
-class SendPlanToN8nTool(BaseTool):
-    name: str = "send_plan_to_n8n"
-    description: str = """Send the completed study plan to an n8n webhook.
-    
-    This tool POSTs the study plan data to the configured n8n webhook URL.
-    Use this after generating and saving a plan to trigger external workflows
-    (e.g., calendar integration, notifications, etc.)."""
-    args_schema: Type[BaseModel] = SendPlanToN8nInput
-    
-    def _run(self, plan_data: Dict[str, Any], user_id: str) -> str:
-        if not N8N_WEBHOOK_URL:
-            return "N8N_WEBHOOK_URL not configured. Skipping webhook call."
-        
-        try:
-            payload = {
-                "user_id": user_id,
-                "plan_data": plan_data,
-                "timestamp": str(os.path.getmtime(__file__) if os.path.exists(__file__) else "")
-            }
-            
-            response = requests.post(
-                N8N_WEBHOOK_URL,
-                json=payload,
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                return f"Plan sent to n8n webhook successfully. Response: {response.text[:100]}"
-            else:
-                return f"Error sending to n8n webhook. Status: {response.status_code}, Response: {response.text[:200]}"
-                
-        except requests.exceptions.RequestException as e:
-            return f"Error connecting to n8n webhook: {str(e)}"
-        except Exception as e:
-            return f"Error sending plan to n8n: {str(e)}"
-
-
 # Create tool instances for export
 read_syllabus_content = ReadSyllabusContentTool()
 write_study_plan = WriteStudyPlanTool()
 get_existing_plan = GetExistingPlanTool()
-send_plan_to_n8n = SendPlanToN8nTool()
 

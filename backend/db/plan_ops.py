@@ -210,7 +210,7 @@ def save_syllabus(
         raw_text: Extracted text from PDF (for RAG)
         file_name: Optional original filename
         course_code: Optional course code (e.g., "CS101")
-        structured_data: Optional structured data from N8N (Class Times, Lab Due Dates, etc.)
+        structured_data: Optional structured data (Class Times, Lab Due Dates, etc.)
         
     Returns:
         ID of the created syllabus

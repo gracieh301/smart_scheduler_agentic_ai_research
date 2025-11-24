@@ -47,7 +47,7 @@ def create_supervisor_agent() -> Agent:
         "allow_delegation": True  # Supervisor can delegate to other agents
     }
     
-    # Add LLM if configured (for Groq support)
+    # Add LLM if configured
     if _llm is not None:
         agent_kwargs["llm"] = _llm
     

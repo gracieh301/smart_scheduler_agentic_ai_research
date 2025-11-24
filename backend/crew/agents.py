@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import tools
-from .tools import read_syllabus_content, write_study_plan, get_existing_plan, send_plan_to_n8n
+from .tools import read_syllabus_content, write_study_plan, get_existing_plan
 from .llm_config import get_llm, print_llm_status
 
 # Print LLM status on import
@@ -43,7 +43,7 @@ def create_study_planner_agent() -> Agent:
         "tools": [read_syllabus_content, write_study_plan, get_existing_plan]
     }
     
-    # Add LLM if configured (for Groq support)
+    # Add LLM if configured
     if _llm is not None:
         agent_kwargs["llm"] = _llm
     
@@ -71,7 +71,7 @@ def create_tutor_agent() -> Agent:
         "tools": [read_syllabus_content]
     }
     
-    # Add LLM if configured (for Groq support)
+    # Add LLM if configured
     if _llm is not None:
         agent_kwargs["llm"] = _llm
     
@@ -100,7 +100,7 @@ def create_parsing_agent() -> Agent:
         "tools": [read_syllabus_content]
     }
     
-    # Add LLM if configured (for Groq support)
+    # Add LLM if configured
     if _llm is not None:
         agent_kwargs["llm"] = _llm
     
