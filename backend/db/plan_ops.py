@@ -207,7 +207,7 @@ def save_syllabus(
     Args:
         user_id: User identifier
         course_name: Name of the course
-        raw_text: Extracted text from PDF (for RAG)
+        raw_text: Extracted text from PDF
         file_name: Optional original filename
         course_code: Optional course code (e.g., "CS101")
         structured_data: Optional structured data (Class Times, Lab Due Dates, etc.)

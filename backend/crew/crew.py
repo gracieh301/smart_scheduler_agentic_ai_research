@@ -12,7 +12,6 @@ load_dotenv()
 from .supervisor import create_supervisor_agent
 from .agents import (
     create_study_planner_agent,
-    create_tutor_agent,
     create_parsing_agent
 )
 
@@ -24,7 +23,6 @@ def create_crew() -> Crew:
     The crew consists of:
     - Supervisor Agent: Routes requests to other agents
     - Study Planner Agent: Creates weekly study schedules
-    - Tutor Agent: Answers student questions
     - Parsing Agent: Extracts syllabus information
     
     Returns:
@@ -33,12 +31,11 @@ def create_crew() -> Crew:
     # Create all agents
     supervisor = create_supervisor_agent()
     study_planner = create_study_planner_agent()
-    tutor = create_tutor_agent()
     parser = create_parsing_agent()
     
     # Create the crew
     crew = Crew(
-        agents=[supervisor, study_planner, tutor, parser],
+        agents=[supervisor, study_planner, parser],
         tasks=[],  # Tasks are created dynamically based on requests
         verbose=True,
         process="sequential"  # Process tasks sequentially
@@ -69,7 +66,8 @@ def create_plan_generation_task(
     Generate an optimized weekly study plan for user {user_id}.
     
     Steps:
-    1. Read the syllabus content using the read_syllabus_content tool to understand:
+    1. Read the syllabus content using the read_syllabus_content tool to get the full syllabus text.
+       Analyze the content to understand:
        - Course topics and their sequence
        - Assignment due dates and exam dates
        - Estimated workload per topic

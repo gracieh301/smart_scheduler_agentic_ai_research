@@ -18,49 +18,79 @@ from pathlib import Path
 backend_path = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_path))
 
-from vector.rag import retrieve_relevant_chunks
 from db.plan_ops import save_study_plan, get_study_plan, get_syllabus
 
 
 class ReadSyllabusContentInput(BaseModel):
     """Input schema for read_syllabus_content tool."""
-    query: str = Field(..., description="What to search for in the syllabus (e.g., 'assignment due dates', 'topics covered', 'exam schedule')")
     user_id: str = Field(..., description="User identifier to filter syllabus content")
-    n_results: int = Field(default=5, description="Number of relevant chunks to retrieve")
+    syllabus_id: Optional[int] = Field(default=None, description="Optional specific syllabus ID. If None, returns the most recent syllabus for the user.")
 
 
 class ReadSyllabusContentTool(BaseTool):
     name: str = "read_syllabus_content"
-    description: str = """Read relevant content from the syllabus using semantic search.
+    description: str = """Read syllabus content from the database.
     
-    This tool retrieves the most relevant chunks from the uploaded syllabus PDF
-    based on a query. Use this when you need to understand course topics, 
-    assignments, due dates, or any other syllabus information."""
+    This tool retrieves the full syllabus text from the database for the specified user.
+    Use this when you need to understand course topics, assignments, due dates, 
+    or any other syllabus information. The tool returns the complete syllabus text
+    extracted from the PDF."""
     args_schema: Type[BaseModel] = ReadSyllabusContentInput
     
-    def _run(self, query: str, user_id: str, n_results: int = 5) -> str:
+    def _run(self, user_id: str, syllabus_id: Optional[int] = None) -> str:
         try:
-            results = retrieve_relevant_chunks(
-                query=query,
-                user_id=user_id,
-                n_results=n_results
-            )
+            # Get syllabus from database
+            if syllabus_id:
+                syllabus = get_syllabus(syllabus_id)
+                if not syllabus or syllabus.get('user_id') != user_id:
+                    return f"No syllabus found with ID {syllabus_id} for user {user_id}"
+            else:
+                # Get the most recent syllabus for the user
+                from db.models import Syllabus, get_session
+                db = get_session()
+                try:
+                    syllabus_record = db.query(Syllabus).filter(
+                        Syllabus.user_id == user_id
+                    ).order_by(Syllabus.created_at.desc()).first()
+                    
+                    if not syllabus_record:
+                        return f"No syllabus found for user {user_id}"
+                    
+                    syllabus = {
+                        'id': syllabus_record.id,
+                        'user_id': syllabus_record.user_id,
+                        'course_name': syllabus_record.course_name,
+                        'course_code': syllabus_record.course_code,
+                        'raw_text': syllabus_record.raw_text,
+                        'file_name': syllabus_record.file_name,
+                        'structured_data': syllabus_record.structured_data,
+                        'created_at': syllabus_record.created_at.isoformat() if syllabus_record.created_at else None
+                    }
+                finally:
+                    db.close()
             
-            if not results:
-                return f"No relevant content found for query: {query}"
+            if not syllabus:
+                return f"No syllabus found for user {user_id}"
             
-            # Format results
-            formatted_content = []
-            for i, result in enumerate(results, 1):
-                text = result.get("text", "")
-                metadata = result.get("metadata", {})
-                course_name = metadata.get("course_name", "Unknown Course")
-                
-                formatted_content.append(
-                    f"[Chunk {i} from {course_name}]\n{text}\n"
-                )
+            # Format the syllabus content
+            content_parts = []
+            content_parts.append(f"Course: {syllabus.get('course_name', 'Unknown')}")
+            if syllabus.get('course_code'):
+                content_parts.append(f"Course Code: {syllabus.get('course_code')}")
+            content_parts.append(f"Syllabus ID: {syllabus.get('id')}")
+            content_parts.append("")
+            content_parts.append("Syllabus Content:")
+            content_parts.append("=" * 50)
+            content_parts.append(syllabus.get('raw_text', ''))
             
-            return "\n".join(formatted_content)
+            if syllabus.get('structured_data'):
+                content_parts.append("")
+                content_parts.append("Structured Data:")
+                content_parts.append("=" * 50)
+                import json
+                content_parts.append(json.dumps(syllabus.get('structured_data'), indent=2))
+            
+            return "\n".join(content_parts)
             
         except Exception as e:
             return f"Error reading syllabus content: {str(e)}"

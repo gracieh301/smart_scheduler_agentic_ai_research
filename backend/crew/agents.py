@@ -1,6 +1,6 @@
 """
 CrewAI agents for Study Plan Generator.
-Defines three specialized agents: Study Planner, Tutor/Explanation, and Parsing.
+Defines specialized agents: Study Planner and Parsing.
 """
 from crewai import Agent
 from typing import Optional
@@ -41,34 +41,6 @@ def create_study_planner_agent() -> Agent:
         "verbose": True,
         "allow_delegation": False,
         "tools": [read_syllabus_content, write_study_plan, get_existing_plan]
-    }
-    
-    # Add LLM if configured
-    if _llm is not None:
-        agent_kwargs["llm"] = _llm
-    
-    return Agent(**agent_kwargs)
-
-
-def create_tutor_agent() -> Agent:
-    """
-    Create the Tutor/Explanation Agent.
-    
-    This agent answers conceptual student questions using RAG to retrieve
-    relevant syllabus content. It provides explanations and clarifications.
-    
-    Returns:
-        Configured Tutor Agent
-    """
-    agent_kwargs = {
-        "role": "Educational Tutor",
-        "goal": "Answer student questions about course content using syllabus information and provide clear explanations",
-        "backstory": """You are a patient and knowledgeable tutor who helps students understand course
-        material. You use the syllabus content to provide accurate, context-aware answers. You
-        break down complex concepts into understandable parts and provide examples when helpful.""",
-        "verbose": True,
-        "allow_delegation": False,
-        "tools": [read_syllabus_content]
     }
     
     # Add LLM if configured

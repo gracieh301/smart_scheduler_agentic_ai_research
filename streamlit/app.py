@@ -5,7 +5,7 @@ Allows students to upload syllabus PDFs and generate optimized study plans.
 import streamlit as st
 import os
 from pathlib import Path
-from api_client import upload_syllabus_to_n8n, generate_plan, health_check
+from api_client import upload_syllabus_to_n8n, upload_syllabus_to_backend, generate_plan, health_check
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -90,48 +90,79 @@ def main():
             if uploaded_file is None:
                 st.error("Please upload a PDF file first")
             else:
-                with st.spinner("Sending PDF to n8n for processing and calendar integration..."):
-                    # Save uploaded file temporarily
-                    temp_path = Path("temp_syllabus.pdf")
-                    with open(temp_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                    
-                    # Upload directly to n8n webhook
-                    result = upload_syllabus_to_n8n(
+                # Save uploaded file temporarily
+                temp_path = Path("temp_syllabus.pdf")
+                with open(temp_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                
+                # Upload to both n8n (for calendar) and backend (for CrewAI/RAG)
+                n8n_success = False
+                backend_success = False
+                syllabus_id = None
+                
+                # Step 1: Send to n8n for calendar integration
+                with st.spinner("Sending PDF to n8n for calendar integration..."):
+                    n8n_result = upload_syllabus_to_n8n(
                         file_path=str(temp_path),
                         user_id=st.session_state.user_id,
                         course_name=course_name or None,
                         course_code=course_code or None
                     )
+                    n8n_success = n8n_result.get("success", False)
+                
+                # Step 2: Send to backend for CrewAI processing (REQUIRED for RAG)
+                with st.spinner("Processing PDF in backend for CrewAI (this enables study plan generation)..."):
+                    backend_result = upload_syllabus_to_backend(
+                        file_path=str(temp_path),
+                        user_id=st.session_state.user_id,
+                        course_name=course_name or None,
+                        course_code=course_code or None
+                    )
+                    backend_success = backend_result.get("success", False)
+                    if backend_success:
+                        backend_data = backend_result.get("data", {})
+                        syllabus_id = backend_data.get("syllabus_id")
+                        st.session_state.syllabus_id = syllabus_id
+                
+                # Clean up temp file
+                if temp_path.exists():
+                    temp_path.unlink()
+                
+                # Show results
+                if n8n_success and backend_success:
+                    st.success(f"✅ Syllabus uploaded successfully!")
+                    st.info("📅 n8n is processing the PDF and uploading dates to your calendar")
+                    st.info(f"📝 Syllabus ID: {syllabus_id} - Ready for study plan generation")
                     
-                    # Clean up temp file
-                    if temp_path.exists():
-                        temp_path.unlink()
+                    # Show summary
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("Course", backend_result.get("data", {}).get("course_name", course_name or "Unknown"))
+                    with col2:
+                        st.metric("Syllabus ID", syllabus_id)
+                elif backend_success:
+                    st.success(f"✅ Syllabus processed in backend successfully!")
+                    st.warning("⚠️ n8n upload failed, but syllabus is ready for study plan generation")
+                    st.info(f"📝 Syllabus ID: {syllabus_id}")
                     
-                    if result.get("success"):
-                        data = result.get("data", {})
-                        st.success(f"✅ Syllabus sent to n8n successfully!")
-                        st.info("📅 n8n is processing the PDF and uploading dates to your calendar")
-                        
-                        # Show summary if n8n returns data
-                        if data:
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.metric("Course", data.get("course_name", course_name or "Unknown"))
-                            with col2:
-                                if "syllabus_id" in data:
-                                    st.metric("Syllabus ID", data.get("syllabus_id"))
-                        
-                        # Optionally show n8n response
-                        if data and len(data) > 0:
-                            with st.expander("View n8n Response"):
-                                st.json(data)
-                    else:
-                        st.error(f"❌ Error: {result.get('error')}")
-                        st.info("💡 Make sure:")
-                        st.info("1. N8N_WEBHOOK_URL is set in your .env file")
-                        st.info("2. Your n8n workflow is active and configured correctly")
-                        st.info("3. The PDF file is not corrupted")
+                    if not n8n_success:
+                        st.error(f"n8n Error: {n8n_result.get('error')}")
+                elif n8n_success:
+                    st.error("❌ Backend processing failed - study plan generation will not work")
+                    st.warning("⚠️ n8n upload succeeded, but backend processing failed")
+                    st.error(f"Backend Error: {backend_result.get('error')}")
+                    st.info("💡 Make sure:")
+                    st.info("1. Flask backend is running")
+                    st.info("2. PyPDF2 is installed in the backend")
+                    st.info("3. The PDF file is not corrupted")
+                else:
+                    st.error("❌ Both n8n and backend uploads failed")
+                    st.error(f"n8n Error: {n8n_result.get('error')}")
+                    st.error(f"Backend Error: {backend_result.get('error')}")
+                    st.info("💡 Make sure:")
+                    st.info("1. N8N_WEBHOOK_URL is set in your .env file")
+                    st.info("2. Flask backend is running")
+                    st.info("3. The PDF file is not corrupted")
     
     with tab2:
         st.header("Generate Study Plan")

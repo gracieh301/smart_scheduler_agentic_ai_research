@@ -20,7 +20,6 @@ load_dotenv()
 # Import backend modules
 from db.models import init_db
 from db.plan_ops import save_syllabus, get_study_plan, get_syllabus
-from vector.rag import load_and_embed_syllabus
 from crew.crew import run_plan_generation
 
 # PDF reading utility
@@ -73,7 +72,6 @@ def upload_syllabus():
     1. Receives a PDF file
     2. Extracts text from the PDF
     3. Saves the syllabus to the database
-    4. Stores it in the vector database for RAG
     
     Request:
         Form data with 'file' field (PDF file)
@@ -137,25 +135,6 @@ def upload_syllabus():
                 "success": False,
                 "error": f"Error saving syllabus to database: {str(e)}"
             }), 500
-        
-        # Store in vector database for RAG
-        # This can take a while for large PDFs, so we do it after saving to DB
-        try:
-            print(f"Starting vector DB embedding generation for syllabus {syllabus_id}...")
-            print(f"Text length: {len(extracted_text)} characters")
-            load_and_embed_syllabus(
-                syllabus_text=extracted_text,
-                user_id=user_id,
-                course_name=course_name,
-                syllabus_id=syllabus_id
-            )
-            print(f"Successfully stored syllabus {syllabus_id} in vector DB")
-        except Exception as e:
-            import traceback
-            error_trace = traceback.format_exc()
-            print(f"Warning: Failed to store syllabus in vector DB: {e}")
-            print(f"Full traceback:\n{error_trace}")
-            # Continue even if vector DB storage fails - syllabus is already saved to DB
         
         return jsonify({
             "success": True,

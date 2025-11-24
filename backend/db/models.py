@@ -27,7 +27,7 @@ class Syllabus(Base):
     user_id = Column(String(100), nullable=False, index=True)  # External user ID
     course_name = Column(String(255), nullable=False)
     course_code = Column(String(50), nullable=True)
-    raw_text = Column(Text, nullable=False)  # Extracted text from PDF (for RAG)
+    raw_text = Column(Text, nullable=False)  # Extracted text from PDF
     file_name = Column(String(255), nullable=True)
     structured_data = Column(JSON, nullable=True)  # Structured data (Class Times, Lab Due Dates, etc.)
     created_at = Column(DateTime, default=datetime.utcnow)

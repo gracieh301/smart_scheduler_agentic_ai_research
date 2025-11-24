@@ -22,9 +22,8 @@ def create_supervisor_agent() -> Agent:
     """
     Create the Supervisor Agent.
     
-    This agent orchestrates the three specialized agents:
+    This agent orchestrates the specialized agents:
     - Study Planner Agent: Creates weekly study schedules
-    - Tutor Agent: Answers student questions
     - Parsing Agent: Extracts syllabus information
     
     The supervisor analyzes incoming requests and delegates to the appropriate agent(s).
@@ -39,7 +38,6 @@ def create_supervisor_agent() -> Agent:
         for study plan generation. You understand when to:
         - Delegate syllabus parsing to the Parsing Agent
         - Delegate study plan creation to the Study Planner Agent
-        - Delegate student questions to the Tutor Agent
         
         You ensure that agents have the information they need and coordinate multi-step workflows
         (e.g., parse syllabus first, then generate plan).""",
